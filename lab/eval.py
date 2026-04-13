@@ -116,9 +116,10 @@ Output JSON format EXACTLY like this: {{"score": 5, "reason": "Your reason here"
             temperature=0
         )
         result = json.loads(response.choices[0].message.content)
+        meta_note = f"[Judge: {LLM_MODEL}] {result.get('reason')}"
         return {
             "score": result.get("score"),
-            "notes": result.get("reason"),
+            "notes": meta_note,
         }
     except Exception as e:
         return {
@@ -166,9 +167,10 @@ Output JSON format EXACTLY like this: {{"score": 5, "reason": "Your reason here"
             temperature=0
         )
         result = json.loads(response.choices[0].message.content)
+        meta_note = f"[Judge: {LLM_MODEL}] {result.get('reason')}"
         return {
             "score": result.get("score"),
-            "notes": result.get("reason"),
+            "notes": meta_note,
         }
     except Exception as e:
         return {
@@ -301,11 +303,12 @@ Output JSON format EXACTLY like this: {{"score": 5, "missing_points": ["point 1"
         )
         result = json.loads(response.choices[0].message.content)
         missing_points = result.get("missing_points", [])
-        notes = f"Missing: {', '.join(missing_points)}" if missing_points else "All key points covered."
+        reason = f"Missing: {', '.join(missing_points)}" if missing_points else "All key points covered."
+        meta_note = f"[Judge: {LLM_MODEL}] {reason}"
         
         return {
             "score": result.get("score"),
-            "notes": notes,
+            "notes": meta_note,
         }
     except Exception as e:
         return {

@@ -1,26 +1,26 @@
 # Scorecard: variant_hybrid
-Generated: 2026-04-13 17:30
+Generated: 2026-04-13 21:23
 
 ## Summary
 
 | Metric | Average Score |
 |--------|--------------|
-| Faithfulness | 4.30/5 |
-| Relevance | 4.60/5 |
+| Faithfulness | 4.70/5 |
+| Relevance | 4.50/5 |
 | Context Recall | 5.00/5 |
-| Completeness | 3.70/5 |
+| Completeness | 4.00/5 |
 
 ## Per-Question Results
 
 | ID | Category | Faithful | Relevant | Recall | Complete | Notes |
 |----|----------|----------|----------|--------|----------|-------|
-| q01 | SLA | 5 | 5 | 5 | 4 | Every claim in the answer is supported by the retrieved chunks. |
-| q02 | Refund | 5 | 5 | 5 | 5 | The answer accurately reflects the information from the retrieved chunks, specifically stating that customers can request a refund within 7 working days from the order confirmation, which is fully supported by the provided details. |
-| q03 | Access Control | 5 | 5 | 5 | 5 | Every claim in the answer is supported by the retrieved chunks. |
-| q04 | Refund | 4 | 5 | 5 | 3 | The answer correctly states that digital products are not refundable unless there is a manufacturing defect and other conditions are met. However, it does not explicitly mention the 7-day requirement for requesting a refund, which is a minor detail. |
-| q05 | IT Helpdesk | 5 | 5 | 5 | 5 | Every claim in the answer is supported by the retrieved chunks. |
-| q06 | SLA | 5 | 5 | 5 | 2 | Every claim in the answer is supported by the retrieved chunks. |
-| q07 | Access Control | 4 | 5 | 5 | 3 | The answer correctly identifies that the Approval Matrix regulates the access permission process for internal systems, but it does not explicitly mention that it applies to all employees, contractors, and third-party vendors, which is a minor detail not included in the answer. |
-| q08 | HR Policy | 5 | 5 | 5 | 4 | The answer accurately reflects the information from the retrieved chunks regarding the remote work policy, specifically that employees can work remotely up to 2 days per week after completing their probation period. |
-| q09 | Insufficient Context | 4 | 4 | None | 3 | The answer correctly identifies ERR-403-AUTH as a permission-related error and suggests checking and requesting access through the described process. However, it does not explicitly mention the specific steps for creating an Access Request ticket on Jira, which is a minor detail. |
-| q10 | Refund | 1 | 2 | 5 | 3 | The answer claims there is no information about an emergency refund process for VIP customers, which is not supported by the retrieved chunks. The chunks only detail the standard refund process without mentioning any specific provisions for VIP customers. |
+| q01 | SLA | 5 | 5 | 5 | 4 | [Judge: gpt-4o-mini] Every claim in the answer is supported by the retrieved chunks. |
+| q02 | Refund | 5 | 5 | 5 | 4 | [Judge: gpt-4o-mini] Every claim in the answer is supported by the retrieved chunks. |
+| q03 | Access Control | 5 | 5 | 5 | 5 | [Judge: gpt-4o-mini] Every claim in the answer is supported by the retrieved chunks, specifically stating that Level 3 access requires approval from Line Manager, IT Admin, and IT Security. |
+| q04 | Refund | 5 | 5 | 5 | 5 | [Judge: gpt-4o-mini] Every claim in the answer is supported by the retrieved chunks, specifically stating that digital products are non-refundable and listing examples such as license keys and subscriptions. |
+| q05 | IT Helpdesk | 5 | 5 | 5 | 4 | [Judge: gpt-4o-mini] Every claim in the answer is supported by the retrieved chunks. |
+| q06 | SLA | 5 | 5 | 5 | 2 | [Judge: gpt-4o-mini] Every claim in the answer is supported by the retrieved chunks. |
+| q07 | Access Control | 4 | 3 | 5 | 3 | [Judge: gpt-4o-mini] The answer accurately summarizes the process for granting access as outlined in the retrieved chunks, including the steps involved. However, it mentions the 'Approval Matrix' which is not explicitly covered in the provided information, making it a minor unsupported detail. |
+| q08 | HR Policy | 5 | 5 | 5 | 5 | [Judge: gpt-4o-mini] The answer accurately reflects the information from the retrieved chunks regarding the remote work policy, specifically that employees can work remotely up to 2 days per week after the probation period. |
+| q09 | Insufficient Context | 4 | 4 | None | 4 | [Judge: gpt-4o-mini] The answer accurately describes the process for handling the ERR-403-AUTH error by referencing the need to create an Access Request ticket on Jira and waiting for approval from the Line Manager. However, it introduces the suggestion to contact IT Helpdesk for more information, which is not explicitly supported by the retrieved chunks. |
+| q10 | Refund | 4 | 3 | 5 | 4 | [Judge: gpt-4o-mini] The answer accurately reflects the general refund process outlined in the retrieved chunks, including the steps for submitting a request and the timeline for processing. However, it lacks specific information about whether there is a special expedited refund process for VIP customers, which is not addressed in the retrieved chunks. |
