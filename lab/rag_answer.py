@@ -36,7 +36,9 @@ def retrieve_dense(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any]
         import json
         # print(json.dumps(result, indent=2, ensure_ascii=False))
         chunks = []
-        for i in range(top_k):
+        num_returned = len(result["documents"][0]) 
+    
+        for i in range(num_returned):
             chunks.append({
                 "text": result["documents"][0][i],
                 "metadata": result["metadatas"][0][i],
@@ -101,8 +103,8 @@ def retrieve_sparse(query: str, top_k: int = TOP_K_SEARCH) -> List[Dict[str, Any
 def retrieve_hybrid(
     query: str,
     top_k: int = TOP_K_SEARCH,
-    dense_weight: float = 0.9,
-    sparse_weight: float = 0.1,
+    dense_weight: float = 0.8,
+    sparse_weight: float = 0.2,
 ) -> List[Dict[str, Any]]:
     
     # Lấy pool kết quả rộng hơn để fusion hiệu quả hơn
@@ -153,12 +155,13 @@ def rerank(
     candidates: List[Dict[str, Any]],
     top_k: int = TOP_K_SELECT,
 ) -> List[Dict[str, Any]]:
+    if not candidates:
+        return []
     
-    # TODO Sprint 3: Implement rerank
-    # Tạm thời trả về top_k đầu tiên (không rerank)
-    # from sentence_transformers import SentenceTransformer
-    # model = 
-    return candidates[:top_k]
+    # Ở Sprint 3, nếu chưa cài SentenceTransformer, 
+    # hãy đảm bảo không lấy quá số lượng đang có
+    actual_top_k = min(top_k, len(candidates))
+    return candidates[:actual_top_k]
 
 
 # =============================================================================
@@ -209,6 +212,7 @@ def build_grounded_prompt(query: str, context_block: str) -> str:
 If the context is insufficient to answer the question, say you do not know and do not make up information.
 If the context does not fully address the question, state what information is missing, and then provide any related or general information from the context that might be helpful. Do not make up any information not present in the context.
 Following that, if the query looks like a technical error, guess the error and ask them to contact IT helpdesk.
+List all conditions, timestamps, and special notes from the context. Include every regulatory detail (e.g., specific days, frequencies, department names) without omission.
 
 Cite the source field (in brackets like [1]) at the end of each relevant sentence or phrase.
 
