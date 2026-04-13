@@ -30,7 +30,7 @@ và ưu tiên trả lời grounded để giảm hallucination.
 | File | Nguồn | Department | Số chunk |
 |------|-------|-----------|---------|
 | `policy_refund_v4.txt` | policy/refund-v4.pdf | CS | 6 |
-| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | 11 |
+| `sla_p1_2026.txt` | support/sla-p1-2026.pdf | IT | 5 |
 | `access_control_sop.txt` | it/access-control-sop.md | IT Security | 7 |
 | `it_helpdesk_faq.txt` | support/helpdesk-faq.md | IT | 6 |
 | `hr_leave_policy.txt` | hr/leave-policy-2026.pdf | HR | 5 |
