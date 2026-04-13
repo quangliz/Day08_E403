@@ -19,10 +19,16 @@ A/B Rule (từ slide):
 
 import json
 import csv
+import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from rag_answer import rag_answer
+from openai import OpenAI
+
+# Initialize OpenAI client
+client = OpenAI()
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
 # =============================================================================
 # CẤU HÌNH
@@ -46,8 +52,8 @@ VARIANT_CONFIG = {
     "retrieval_mode": "hybrid",   # Hoặc "dense" nếu chỉ đổi rerank
     "top_k_search": 10,
     "top_k_select": 3,
-    "use_rerank": True,           # Hoặc False nếu variant là hybrid không rerank
-    "label": "variant_hybrid_rerank",
+    "use_rerank": False,           # Hoặc False nếu variant là hybrid không rerank
+    "label": "variant_hybrid",
 }
 
 
@@ -89,11 +95,36 @@ def score_faithfulness(
     Trả về dict với: score (1-5) và notes (lý do)
     """
     # TODO Sprint 4: Implement scoring
-    # Tạm thời trả về None (yêu cầu chấm thủ công)
-    return {
-        "score": None,
-        "notes": "TODO: Chấm thủ công hoặc implement LLM-as-Judge",
-    }
+    try:
+        context = "\n---\n".join([c.get("text", "") for c in chunks_used])
+        prompt = f"""Given these retrieved chunks:
+{context}
+And this answer:
+{answer}
+Rate faithfulness on a scale of 1-5 using this rubric:
+- 5: Every claim in the answer is supported by the retrieved chunks.
+- 4: Almost fully grounded; at most one minor unsupported detail.
+- 3: Mostly grounded, but includes some information not clearly supported by chunks.
+- 2: Many important claims are not supported by the retrieved chunks.
+- 1: Largely ungrounded; most content is fabricated or unsupported.
+Output JSON format EXACTLY like this: {{"score": 5, "reason": "Your reason here"}}"""
+
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0
+        )
+        result = json.loads(response.choices[0].message.content)
+        return {
+            "score": result.get("score"),
+            "notes": result.get("reason"),
+        }
+    except Exception as e:
+        return {
+            "score": None,
+            "notes": f"LLM Error: {str(e)}",
+        }
 
 
 def score_answer_relevance(
@@ -113,10 +144,37 @@ def score_answer_relevance(
 
     TODO Sprint 4: Implement tương tự score_faithfulness
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_answer_relevance",
-    }
+    try:
+        prompt = f"""Given this user query:
+{query}
+
+And this answer:
+{answer}
+
+Rate answer relevance on a scale of 1-5 using this rubric:
+- 5: Directly and fully answers the user query.
+- 4: Correct and relevant, but misses a few minor details.
+- 3: Related to the query but does not address the core need well.
+- 2: Partly off-topic or only weakly answers the query.
+- 1: Does not answer the query or is irrelevant.
+Output JSON format EXACTLY like this: {{"score": 5, "reason": "Your reason here"}}"""
+
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0
+        )
+        result = json.loads(response.choices[0].message.content)
+        return {
+            "score": result.get("score"),
+            "notes": result.get("reason"),
+        }
+    except Exception as e:
+        return {
+            "score": None,
+            "notes": f"LLM Error: {str(e)}",
+        }
 
 
 def score_context_recall(
@@ -151,13 +209,24 @@ def score_context_recall(
         for c in chunks_used
     }
 
-    # TODO: Kiểm tra matching theo partial path (vì source paths có thể khác format)
     found = 0
     missing = []
     for expected in expected_sources:
-        # Kiểm tra partial match (tên file)
-        expected_name = expected.split("/")[-1].replace(".pdf", "").replace(".md", "")
-        matched = any(expected_name.lower() in r.lower() for r in retrieved_sources)
+        # Lấy tên file và chuẩn hóa (bỏ extension, chuyển - thành _)
+        expected_name = expected.split("/")[-1].replace(".pdf", "").replace(".md", "").replace("-", "_").lower()
+        expected_words = set(expected_name.split("_"))
+        
+        matched = False
+        for r in retrieved_sources:
+            r_name = r.split("/")[-1].replace(".txt", "").replace(".pdf", "").replace(".md", "").replace("-", "_").lower()
+            r_words = set(r_name.split("_"))
+            
+            # Nếu có ít nhất 2 từ khóa trùng nhau hoặc khớp hoàn toàn số từ khóa
+            shared = expected_words.intersection(r_words)
+            if len(shared) >= 2 or len(shared) == len(expected_words):
+                matched = True
+                break
+                
         if matched:
             found += 1
         else:
@@ -198,10 +267,51 @@ def score_completeness(
          Rate completeness 1-5. Are all key points covered?
          Output: {'score': int, 'missing_points': [str]}"
     """
-    return {
-        "score": None,
-        "notes": "TODO: Implement score_completeness (so sánh với expected_answer)",
-    }
+    if not expected_answer:
+        return {
+            "score": None,
+            "notes": "No expected answer provided.",
+        }
+
+    try:
+        prompt = f"""Given this query:
+{query}
+
+Expected answer (reference):
+{expected_answer}
+
+Model answer:
+{answer}
+
+Compare the model answer with the expected answer and rate completeness on a scale of 1-5 using this rubric:
+- 5: Covers all important points from the expected answer.
+- 4: Misses one minor detail.
+- 3: Misses some important information.
+- 2: Misses many important points.
+- 1: Misses most core content.
+
+Return missing key points as short bullet-style phrases.
+Output JSON format EXACTLY like this: {{"score": 5, "missing_points": ["point 1", "point 2"]}}"""
+
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0
+        )
+        result = json.loads(response.choices[0].message.content)
+        missing_points = result.get("missing_points", [])
+        notes = f"Missing: {', '.join(missing_points)}" if missing_points else "All key points covered."
+        
+        return {
+            "score": result.get("score"),
+            "notes": notes,
+        }
+    except Exception as e:
+        return {
+            "score": None,
+            "notes": f"LLM Error: {str(e)}",
+        }
 
 
 # =============================================================================
@@ -428,6 +538,16 @@ Generated: {timestamp}
         avg_str = f"{avg:.2f}/5" if avg else "N/A"
         md += f"| {metric.replace('_', ' ').title()} | {avg_str} |\n"
 
+    def _md_cell(value: Any) -> str:
+        """
+        Escape markdown table-breaking characters while preserving full content.
+        """
+        if value is None:
+            return "N/A"
+        text = str(value)
+        # Keep full notes, but make them safe inside markdown table cells.
+        return text.replace("|", "\\|").replace("\n", "<br>")
+
     md += "\n## Per-Question Results\n\n"
     md += "| ID | Category | Faithful | Relevant | Recall | Complete | Notes |\n"
     md += "|----|----------|----------|----------|--------|----------|-------|\n"
@@ -435,7 +555,7 @@ Generated: {timestamp}
     for r in results:
         md += (f"| {r['id']} | {r['category']} | {r.get('faithfulness', 'N/A')} | "
                f"{r.get('relevance', 'N/A')} | {r.get('context_recall', 'N/A')} | "
-               f"{r.get('completeness', 'N/A')} | {r.get('faithfulness_notes', '')[:50]} |\n")
+               f"{r.get('completeness', 'N/A')} | {_md_cell(r.get('faithfulness_notes', ''))} |\n")
 
     return md
 
@@ -467,7 +587,7 @@ if __name__ == "__main__":
 
     # --- Chạy Baseline ---
     print("\n--- Chạy Baseline ---")
-    print("Lưu ý: Cần hoàn thành Sprint 2 trước khi chạy scorecard!")
+    # print("Lưu ý: Cần hoàn thành Sprint 2 trước khi chạy scorecard!")
     try:
         baseline_results = run_scorecard(
             config=BASELINE_CONFIG,
@@ -488,28 +608,29 @@ if __name__ == "__main__":
 
     # --- Chạy Variant (sau khi Sprint 3 hoàn thành) ---
     # TODO Sprint 4: Uncomment sau khi implement variant trong rag_answer.py
-    # print("\n--- Chạy Variant ---")
-    # variant_results = run_scorecard(
-    #     config=VARIANT_CONFIG,
-    #     test_questions=test_questions,
-    #     verbose=True,
-    # )
-    # variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
-    # (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
+    print("\n--- Chạy Variant ---")
+    variant_results = run_scorecard(
+        config=VARIANT_CONFIG,
+        test_questions=test_questions,
+        verbose=True,
+    )
+    variant_md = generate_scorecard_summary(variant_results, VARIANT_CONFIG["label"])
+    (RESULTS_DIR / "scorecard_variant.md").write_text(variant_md, encoding="utf-8")
 
     # --- A/B Comparison ---
     # TODO Sprint 4: Uncomment sau khi có cả baseline và variant
-    # if baseline_results and variant_results:
-    #     compare_ab(
-    #         baseline_results,
-    #         variant_results,
-    #         output_csv="ab_comparison.csv"
-    #     )
+    if baseline_results and variant_results:
+        compare_ab(
+            baseline_results,
+            variant_results,
+            output_csv="ab_comparison.csv"
+        )
 
-    print("\n\nViệc cần làm Sprint 4:")
-    print("  1. Hoàn thành Sprint 2 + 3 trước")
-    print("  2. Chấm điểm thủ công hoặc implement LLM-as-Judge trong score_* functions")
-    print("  3. Chạy run_scorecard(BASELINE_CONFIG)")
-    print("  4. Chạy run_scorecard(VARIANT_CONFIG)")
-    print("  5. Gọi compare_ab() để thấy delta")
-    print("  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét")
+    # print("\n\nViệc cần làm Sprint 4:")
+    # print("  1. Hoàn thành Sprint 2 + 3 trước")
+    # print("  2. Chấm điểm thủ công hoặc implement LLM-as-Judge trong score_* functions")
+    # print("  3. Chạy run_scorecard(BASELINE_CONFIG)")
+    # print("  4. Chạy run_scorecard(VARIANT_CONFIG)")
+    # print("  5. Gọi compare_ab() để thấy delta")
+    # print("  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét")
+    # print("  6. Cập nhật docs/tuning-log.md với kết quả và nhận xét")
